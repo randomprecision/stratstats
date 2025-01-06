@@ -8,6 +8,10 @@ from PyQt5.QtGui import QIcon, QTextCursor, QTextDocument, QFont, QTextBlockForm
 from PyQt5.QtPrintSupport import QPrintDialog, QPrintPreviewDialog, QPrinter
 import sqlite3
 
+## stratstats - a simple python-based stratistics tracker for strat-o-matic pen and paper teams. 
+## written with love for my Dad. Find online at https://github.com/randomprecision/stratstats.git
+## written January 2025
+
 # Safe conversion functions
 def safe_int(value):
     try:
@@ -25,7 +29,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("StratStat - Your Dad's Stat Tracker")
-        self.setGeometry(100, 100, 800, 400)
+        self.setGeometry(100, 100, 700, 500)
         self.setWindowIcon(QIcon('bball.png'))
         self.db_connection = self.connect_to_database()
         self.create_tables()  # Ensure tables are created if they don't exist
@@ -108,6 +112,7 @@ class MainWindow(QMainWindow):
         self.roleSelector.addItem("Hitter")
         self.roleSelector.addItem("Pitcher")
         self.roleSelector.currentTextChanged.connect(self.updateFields)
+        self.roleSelector.setFixedWidth(100)  # Set the fixed width to 100
         leftLayout.addWidget(self.roleSelector)
 
         # Config Button (Icon)
@@ -143,21 +148,21 @@ class MainWindow(QMainWindow):
         leftLayout.addWidget(self.successLabel)
 
         # Undo Last, Reset Player, and Navigation buttons in the same row
-        self.undoButton = QPushButton("Undo Last")
+        #self.undoButton = QPushButton("Undo Last")
         self.resetButton = QPushButton("Reset Player")
         self.prevButton = QPushButton("<")
         self.nextButton = QPushButton(">")
 
         # Set the width similar to the "Print Stats" button
         button_width = self.printButton.sizeHint().width()
-        self.undoButton.setFixedWidth(button_width)
+       # self.undoButton.setFixedWidth(button_width)
         self.resetButton.setFixedWidth(button_width)
         self.prevButton.setFixedWidth(button_width)
         self.nextButton.setFixedWidth(button_width)
 
         navUndoResetLayout = QHBoxLayout()
         navUndoResetLayout.addWidget(self.prevButton)
-        navUndoResetLayout.addWidget(self.undoButton)
+        #navUndoResetLayout.addWidget(self.undoButton)
         navUndoResetLayout.addWidget(self.resetButton)
         navUndoResetLayout.addWidget(self.nextButton)
 
@@ -637,6 +642,11 @@ class MainWindow(QMainWindow):
         self.teamSelector = QComboBox()
         self.teamSelector.addItem("Select Team")
         self.updateTeams()
+        self.teamSelector.setMinimumWidth(100)  # Set the minimum width to 100
+        self.teamSelector.setMaximumWidth(100)  # Set the maximum width to 100
+        leftLayout.addWidget(self.teamSelector)
+
+        
         leftLayout.addWidget(self.teamSelector)
 
         # Role Selection
@@ -645,7 +655,9 @@ class MainWindow(QMainWindow):
         self.roleSelector.addItem("Hitter")
         self.roleSelector.addItem("Pitcher")
         self.roleSelector.currentTextChanged.connect(self.updateFields)
+        self.roleSelector.setFixedWidth(100)  # Set the fixed width to 100
         leftLayout.addWidget(self.roleSelector)
+
 
         # Config Button (Icon)
         configLayout = QHBoxLayout()
@@ -673,6 +685,7 @@ class MainWindow(QMainWindow):
         # Add/Update Button
         self.saveButton = QPushButton("Add/Update")
         self.saveButton.clicked.connect(self.saveData)
+        self.saveButton.setFixedWidth(100)  # Set the fixed width to 100
         leftLayout.addWidget(self.saveButton)
 
         # Success Label
@@ -680,21 +693,22 @@ class MainWindow(QMainWindow):
         leftLayout.addWidget(self.successLabel)
 
         # Undo Last, Reset Player, and Navigation buttons in the same row
-        self.undoButton = QPushButton("Undo Last")
+        # feature not impleemented at this time
+        #self.undoButton = QPushButton("Undo Last")
         self.resetButton = QPushButton("Reset Player")
         self.prevButton = QPushButton("<")
         self.nextButton = QPushButton(">")
 
         # Set the width similar to the "Print Stats" button
         button_width = self.printButton.sizeHint().width()
-        self.undoButton.setFixedWidth(button_width)
+        #self.undoButton.setFixedWidth(button_width)
         self.resetButton.setFixedWidth(button_width)
         self.prevButton.setFixedWidth(button_width)
         self.nextButton.setFixedWidth(button_width)
 
         navUndoResetLayout = QHBoxLayout()
         navUndoResetLayout.addWidget(self.prevButton)
-        navUndoResetLayout.addWidget(self.undoButton)
+      #  navUndoResetLayout.addWidget(self.undoButton)
         navUndoResetLayout.addWidget(self.resetButton)
         navUndoResetLayout.addWidget(self.nextButton)
 
@@ -736,8 +750,15 @@ class MainWindow(QMainWindow):
         role = self.roleSelector.currentText()
         team_name = self.teamSelector.currentText()
         cursor = self.db_connection.cursor()
+
+        # Retrieve team_id and handle NoneType
         cursor.execute("SELECT id FROM teams WHERE team_name = ?", (team_name,))
-        team_id = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        if result is None:
+            self.successLabel.setText("No team selected. Operation aborted.")
+            return
+
+        team_id = result[0]
 
         if role == "Hitter":
             first_name = self.hitterFirstNameInput.text()
@@ -831,6 +852,7 @@ class MainWindow(QMainWindow):
 
         # Clear the fields after saving the data
         self.clearFields()
+
 
     def saveHitterData(self, data):
         if self.db_connection:
@@ -978,8 +1000,8 @@ class MainWindow(QMainWindow):
             self.clearFields()
 
 class PrintStatsWindow(QDialog):
-    def __init__(self, parent, db_connection, team_id):
-        super().__init__(parent)
+    def __init__(self, parent=None, db_connection=None, team_id=None):
+        super(PrintStatsWindow, self).__init__(parent)
         self.db_connection = db_connection
         self.team_id = team_id
         self.initUI()
@@ -1015,8 +1037,8 @@ class PrintStatsWindow(QDialog):
         team_id = self.team_id
 
         hitters_header = "Batters\n"
-        hitters_header += "Name               G   AB  ABA  ABR    AVG    SLG    H   R  2B  3B  HR  RBI  K   BB  SB  CS  GIDP  ERR\n"
-        hitters_header += "-" * 101 + "\n"
+        hitters_header += "Name               G   AB  ABA  ABR    AVG    SLG    H    R    2B   3B   HR   RBI    K     BB    SB    CS   GIDP  ERR\n"
+        hitters_header += "-" * 114 + "\n"
         cursor.execute("SELECT first_name, last_name, games, ab, aba, hits, runs, doubles, triples, hr, rbi, k, bb, sb, cs, gidp, err FROM hitters WHERE team_id = ?", (team_id,))
         hitters = cursor.fetchall()
 
@@ -1034,7 +1056,7 @@ class PrintStatsWindow(QDialog):
             avg_str = f"{avg:.3f}".lstrip('0') if ab > 0 else ".000"
             slg_str = f"{slg:.3f}".lstrip('0') if ab > 0 else ".000"
             if first_name and last_name:
-                hitters_stats += f"{first_name[0]}. {last_name:<12}   {games:2}  {ab:3}  {aba:3}  {abr:3}   {avg_str}   {slg_str}   {hits:2}  {runs:2}  {doubles:2}  {triples:2}  {hr:2}  {rbi:2}  {k:2}  {bb:2}  {sb:2}  {cs:2}  {gidp:3}  {err:3}\n"
+                hitters_stats += f"{first_name[0]}. {last_name:<12}   {games:2}  {ab:3}  {aba:3}  {abr:3}   {avg_str:<6} {slg_str:<6} {hits:4} {runs:4} {doubles:4} {triples:4} {hr:4} {rbi:5} {k:5} {bb:5} {sb:4} {cs:4} {gidp:5} {err:3}\n"
 
             total_hits += hits
             total_ab += ab
@@ -1056,8 +1078,8 @@ class PrintStatsWindow(QDialog):
         slg_str = f"{team_slg:.3f}".lstrip('0') if total_ab > 0 else ".000"
 
         summary_header = "\nHitters Totals\n"
-        summary_header += "AVG    SLG    H    R   2B  3B   HR  RBI    K    BB   SB   CS GIDP ERR\n"
-        summary_stats = f"{avg_str:<6} {slg_str:<6} {total_hits:4} {total_runs:4} {total_doubles:4} {total_triples:4} {total_hr:4} {total_rbi:5} {total_k:5} {total_bb:5} {total_sb:4} {total_cs:4} {total_gidp:5} {total_err:4}\n"
+        summary_header += "AVG     SLG     H     R     2B    3B    HR    RBI     K      BB     SB   CS    GIDP  ERR\n"
+        summary_stats = f"{avg_str:<6} {slg_str:<6} {total_hits:<5} {total_runs:<5} {total_doubles:<5} {total_triples:<5} {total_hr:<5} {total_rbi:<6} {total_k:<7} {total_bb:<7} {total_sb:<6} {total_cs:<5} {total_gidp:<6} {total_err:<5}\n"
 
         stats = hitters_header + hitters_stats + summary_header + summary_stats
 
@@ -1068,12 +1090,10 @@ class PrintStatsWindow(QDialog):
         team_id = self.team_id
 
         pitchers_header = "Pitchers\n"
-        pitchers_header += "Name               G   GS   IP    IPA    IPR    W   L  SV   H   ER  HR   ERA   K   BB  WP  ERR\n"
-        pitchers_header += "-" * 94 + "\n"
+        pitchers_header += "Name               G   GS   IP    IPA    IPR    W   L  SV   H   ER    HR   ERA   K     BB     WP     ERR\n"
+        pitchers_header += "-" * 111 + "\n"
         cursor.execute("SELECT first_name, last_name, games, st, ip, ipa, wins, losses, saves, hits, er, hr, k, bb, wp, err FROM pitchers WHERE team_id = ?", (team_id,))
         pitchers = cursor.fetchall()
-
-        pitchers = sorted(pitchers, key=lambda x: x[1])
 
         total_ip = total_er = total_wins = total_losses = total_saves = total_hits = total_hr = total_k = total_bb = total_wp = total_err = 0
 
@@ -1084,7 +1104,7 @@ class PrintStatsWindow(QDialog):
             ipr = ipa - ip
             era = (er / ip * 9) if ip > 0 else 0
             if first_name and last_name:
-                pitchers_stats += f"{first_name[0]}. {last_name:<12}   {games:2}  {st:2}  {ip:5.1f}  {ipa:5.1f}  {ipr:5.1f}  {wins:2}  {losses:2}  {saves:2}  {hits:2}  {er:2}  {hr:2}  {era:5.2f}  {k:2}  {bb:2}  {wp:2}  {err:2}\n"
+                pitchers_stats += f"{first_name[0]}. {last_name:<12}   {games:2}  {st:2}  {ip:5.1f}  {ipa:5.1f}  {ipr:5.1f}  {wins:2}  {losses:2}  {saves:2}  {hits:2}  {er:3}  {hr:3}  {era:5.2f}  {k:5} {bb:5}  {wp:5}  {err:5}\n"
 
             total_ip += ip
             total_er += er
@@ -1102,8 +1122,8 @@ class PrintStatsWindow(QDialog):
         era_str = f"{team_era:.2f}".lstrip('0') if total_ip > 0 else "0.00"
 
         summary_header = "\nPitchers Totals\n"
-        summary_header += "IP      ER  HR   ERA     K    BB  WP ERR\n"
-        summary_stats = f"{total_ip:<7.1f} {total_er:3} {total_hr:3} {era_str:<7} {total_k:5} {total_bb:5} {total_wp:3} {total_err:3}\n"
+        summary_header += "IP      ER    HR   ERA       K       BB       WP       ERR\n"
+        summary_stats = f"{total_ip:<7.1f} {total_er:<5} {total_hr:<5} {era_str:<9} {total_k:<7} {total_bb:<9} {total_wp:<8} {total_err:<7}\n"
 
         stats = pitchers_header + pitchers_stats + summary_header + summary_stats
 
@@ -1139,7 +1159,6 @@ class PrintStatsWindow(QDialog):
 
         # Print pitchers document
         pitchers_document.print_(printer)
-
 
     def saveToFile(self):
         filename, _ = QFileDialog.getSaveFileName(self, "Save Stats", "", "Text Files (*.txt)")
@@ -1180,13 +1199,16 @@ class ConfigWindow(QDialog):
         self.initDbButton.clicked.connect(self.initDatabase)
         layout.addWidget(self.initDbButton)
 
+        # Backup Database
+        self.backupDbButton = QPushButton("Backup Database")
+        self.backupDbButton.clicked.connect(self.backupDatabase)
+        layout.addWidget(self.backupDbButton)
+
         self.setLayout(layout)
         self.updateTeams()
 
     def createTeam(self):
         team_name = self.newTeamName.text()
-
-        # Check if the team name already exists
         cursor = self.db_connection.cursor()
         cursor.execute("SELECT COUNT(*) FROM teams WHERE team_name = ?", (team_name,))
         count = cursor.fetchone()[0]
@@ -1194,7 +1216,6 @@ class ConfigWindow(QDialog):
         if count > 0:
             QMessageBox.warning(self, "Duplicate Team", "A team with this name already exists. Please choose a different name.")
         else:
-            # Insert the new team into the database
             cursor.execute("INSERT INTO teams (team_name) VALUES (?)", (team_name,))
             self.db_connection.commit()
             self.updateTeams()
@@ -1246,55 +1267,23 @@ class ConfigWindow(QDialog):
                 self.parent().updatePlayerList()
             except sqlite3.Error as e:
                 QMessageBox.critical(self, "Error", f"Error initializing database: {e}")
-   
 
-
-
-    def updateTeams(self):
-        # Update the team list or any relevant UI component
-        cursor = self.db_connection.cursor()
-        cursor.execute("SELECT team_name FROM teams")
-        teams = cursor.fetchall()
-        self.teamToDeleteSelector.clear()
-        for team in teams:
-            self.teamToDeleteSelector.addItem(team[0])
-
-    def deleteTeam(self):
-        team_name = self.teamToDeleteSelector.currentText()
-        if team_name and self.db_connection:
-            confirm = QMessageBox.question(self, "Confirm Delete", 
-                                           f"Are you sure you want to delete team '{team_name}'? All statistics will be lost.",
-                                           QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if confirm == QMessageBox.Yes:
-                cursor = self.db_connection.cursor()
-                try:
-                    cursor.execute("DELETE FROM teams WHERE team_name = ?", (team_name,))
-                    cursor.execute("DELETE FROM hitters WHERE team_id IN (SELECT id FROM teams WHERE team_name = ?)", (team_name,))
-                    cursor.execute("DELETE FROM pitchers WHERE team_id IN (SELECT id FROM teams WHERE team_name = ?)", (team_name,))
-                    self.db_connection.commit()
-                    QMessageBox.information(self, "Success", f"Team '{team_name}' deleted successfully.")
-                    self.updateTeams()
-                    self.parent().updateTeams()
-                except sqlite3.Error as e:
-                    QMessageBox.critical(self, "Error", f"Error deleting team: {e}")
-
-    def initDatabase(self):
-        confirm = QMessageBox.question(self, "Confirm Initialization", 
-                                       "Are you sure you want to delete all data in the database? All team and player statistics will be lost.",
-                                       QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if confirm == QMessageBox.Yes and self.db_connection:
-            cursor = self.db_connection.cursor()
+    def backupDatabase(self):
+        from datetime import datetime
+        current_date = datetime.now().strftime('%Y%m%d')
+        default_filename = f"stratstats_backup_{current_date}.sql"
+        
+        options = QFileDialog.Options()
+        options |= QFileDialog.DontUseNativeDialog
+        file_path, _ = QFileDialog.getSaveFileName(self, "Save Database Backup", default_filename, "SQL Files (*.sql);;All Files (*)", options=options)
+        if file_path:
             try:
-                cursor.execute("DELETE FROM hitters")
-                cursor.execute("DELETE FROM pitchers")
-                cursor.execute("DELETE FROM teams")
-                self.db_connection.commit()
-                QMessageBox.information(self, "Success", "Database initialized successfully.")
-                self.updateTeams()
-                self.parent().updateTeams()
-                self.parent().updatePlayerList()
-            except sqlite3.Error as e:
-                QMessageBox.critical(self, "Error", f"Error initializing database: {e}")
+                with open(file_path, 'w') as f:
+                    for line in self.db_connection.iterdump():
+                        f.write(f"{line}\n")
+                QMessageBox.information(self, "Success", f"Database backup saved to {file_path}.")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Error backing up database: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
