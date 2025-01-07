@@ -406,10 +406,10 @@ class MainWindow(QMainWindow):
                 if first_name and last_name:
                     self.playerList.addItem(f"{first_name} {last_name}  IPR: {ipr:.1f}  ERA: {era_str}")
 
-        # Set the font to Courier
+        # Set the font to Courier with typewriter style hint
         font = QFont("Courier", 10)
+        font.setStyleHint(QFont.TypeWriter)
         self.playerList.setFont(font)
-
 
     def loadPlayerData(self, item):
         player = item.text().split()
@@ -476,8 +476,15 @@ class MainWindow(QMainWindow):
     def openPrintStats(self):
         team_name = self.teamSelector.currentText()
         cursor = self.db_connection.cursor()
+
+        # Retrieve team_id and handle NoneType
         cursor.execute("SELECT id FROM teams WHERE team_name = ?", (team_name,))
-        team_id = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        if result is None:
+            QMessageBox.information(self, "No Team Selected", "No team selected. Operation aborted.")
+            return
+
+        team_id = result[0]
         self.printStatsWindow = PrintStatsWindow(self, self.db_connection, team_id)
         self.printStatsWindow.show()
 
@@ -1013,7 +1020,9 @@ class PrintStatsWindow(QDialog):
         layout = QVBoxLayout()
 
         self.statsText = QTextEdit(self)
-        self.statsText.setFont(QFont("Courier", 9))
+        font = QFont("Courier", 9)
+        font.setStyleHint(QFont.TypeWriter)  # Set the style hint to TypeWriter
+        self.statsText.setFont(font)
         layout.addWidget(self.statsText)
 
         self.statsText.setText(self.generateStats() + "\n" + self.generatePitchersStats())
@@ -1290,3 +1299,4 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
+
